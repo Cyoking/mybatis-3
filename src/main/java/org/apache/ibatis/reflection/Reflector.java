@@ -54,16 +54,16 @@ import org.apache.ibatis.util.MapUtil;
 public class Reflector {
 
   private static final MethodHandle isRecordMethodHandle = getIsRecordMethodHandle();
-  private final Class<?> type;
-  private final String[] readablePropertyNames;
-  private final String[] writablePropertyNames;
-  private final Map<String, Invoker> setMethods = new HashMap<>();
-  private final Map<String, Invoker> getMethods = new HashMap<>();
-  private final Map<String, Class<?>> setTypes = new HashMap<>();
-  private final Map<String, Class<?>> getTypes = new HashMap<>();
-  private Constructor<?> defaultConstructor;
+  private final Class<?> type;  // 该 Reflector 对应Class的类
+  private final String[] readablePropertyNames; // 可读属性的名称集合
+  private final String[] writablePropertyNames; // 可写属性的名称集合
+  private final Map<String, Invoker> setMethods = new HashMap<>(); // set方法与对应的 Invoker 的映射
+  private final Map<String, Invoker> getMethods = new HashMap<>(); // get方法与对应的 Invoker 的映射
+  private final Map<String, Class<?>> setTypes = new HashMap<>(); // set方法的参数类型
+  private final Map<String, Class<?>> getTypes = new HashMap<>(); // get方法的返回值类型
+  private Constructor<?> defaultConstructor; // 默认构造方法
 
-  private final Map<String, String> caseInsensitivePropertyMap = new HashMap<>();
+  private final Map<String, String> caseInsensitivePropertyMap = new HashMap<>(); // 将所有方法大写当作Key，原本的值当作value
 
   public Reflector(Class<?> clazz) {
     type = clazz;
