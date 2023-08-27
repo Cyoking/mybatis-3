@@ -74,8 +74,10 @@ public class Reflector {
     } else {
       addGetMethods(classMethods);
       addSetMethods(classMethods);
+      // 封装那些没有get/set方法的字段，直接通过反射映射
       addFields(clazz);
     }
+    // new String[0] 是为了说明类型，和长度。给0是后面自动扩容和和getMethods长度一样
     readablePropertyNames = getMethods.keySet().toArray(new String[0]);
     writablePropertyNames = setMethods.keySet().toArray(new String[0]);
     for (String propName : readablePropertyNames) {
@@ -104,6 +106,11 @@ public class Reflector {
     resolveGetterConflicts(conflictingGetters);
   }
 
+  /**
+   * 解决冲突，主要是解决子类覆盖父类的方法，但是返回值不同的情况，优先使用子类的方法
+   * 特别说明，isAmbiguous 为true的是mybatis处理不了的，因为存在多个get对同一个属性，最终会封装一个AmbiguousMethodInvoker抛出异常
+   * @param conflictingGetters
+   */
   private void resolveGetterConflicts(Map<String, List<Method>> conflictingGetters) {
     for (Entry<String, List<Method>> entry : conflictingGetters.entrySet()) {
       Method winner = null;
@@ -111,12 +118,15 @@ public class Reflector {
       boolean isAmbiguous = false;
       for (Method candidate : entry.getValue()) {
         if (winner == null) {
+          // 第一次循环，直接赋值
           winner = candidate;
           continue;
         }
         Class<?> winnerType = winner.getReturnType();
         Class<?> candidateType = candidate.getReturnType();
         if (candidateType.equals(winnerType)) {
+          // 对于is开头的方法，如果返回值是boolean类型，优先使用
+          // 为什么是boolean，没有特判断Boolean 是因为包装类型可能为null，对于isxxx通常都是使用基本类型
           if (!boolean.class.equals(candidateType)) {
             isAmbiguous = true;
             break;
@@ -124,15 +134,20 @@ public class Reflector {
           if (candidate.getName().startsWith("is")) {
             winner = candidate;
           }
-        } else if (candidateType.isAssignableFrom(winnerType)) {
+        }
+        // 判断候选者是否是winnerType的父类，如果是，说明候选者是winnerType的子类，优先使用子类
+        else if (candidateType.isAssignableFrom(winnerType)) {
           // OK getter type is descendant
-        } else if (winnerType.isAssignableFrom(candidateType)) {
+        }
+        // 如果winnerType是candidateType的父类，优先使用candidate
+        else if (winnerType.isAssignableFrom(candidateType)) {
           winner = candidate;
         } else {
           isAmbiguous = true;
           break;
         }
       }
+      // 封装成一个Invoker对象，存入getMethods中
       addGetMethod(propName, winner, isAmbiguous);
     }
   }
@@ -142,7 +157,9 @@ public class Reflector {
         "Illegal overloaded getter method with ambiguous type for property ''{0}'' in class ''{1}''. This breaks the JavaBeans specification and can cause unpredictable results.",
         name, method.getDeclaringClass().getName())) : new MethodInvoker(method);
     getMethods.put(name, invoker);
+    // 解析方法的返回值类型
     Type returnType = TypeParameterResolver.resolveReturnType(method, type);
+    // 将返回值封装到getTypes中
     getTypes.put(name, typeToClass(returnType));
   }
 
@@ -150,6 +167,7 @@ public class Reflector {
     Map<String, List<Method>> conflictingSetters = new HashMap<>();
     Arrays.stream(methods).filter(m -> m.getParameterTypes().length == 1 && PropertyNamer.isSetter(m.getName()))
         .forEach(m -> addMethodConflict(conflictingSetters, PropertyNamer.methodToProperty(m.getName()), m));
+    // 同get一样都是解决冲突
     resolveSetterConflicts(conflictingSetters);
   }
 
@@ -165,26 +183,37 @@ public class Reflector {
       String propName = entry.getKey();
       List<Method> setters = entry.getValue();
       Class<?> getterType = getTypes.get(propName);
+      // get方法是否是一个模棱两可的方法，如果为true，那么set方法也添加不了
       boolean isGetterAmbiguous = getMethods.get(propName) instanceof AmbiguousMethodInvoker;
       boolean isSetterAmbiguous = false;
       Method match = null;
       for (Method setter : setters) {
+        // 为什么是0，因为set方法只有一个参数
         if (!isGetterAmbiguous && setter.getParameterTypes()[0].equals(getterType)) {
           // should be the best match
           match = setter;
           break;
         }
         if (!isSetterAmbiguous) {
+          // 挑选一个最合适的方法
           match = pickBetterSetter(match, setter, propName);
           isSetterAmbiguous = match == null;
         }
       }
       if (match != null) {
+        // 将对应的set方法封装成一个Invoker对象，存入setMethods中
         addSetMethod(propName, match);
       }
     }
   }
 
+  /**
+   *
+   * @param setter1 之前挑选出来的最合适的方法
+   * @param setter2 当前的方法
+   * @param property 属性名
+   * @return 返回null表示没有找到最合适的方法
+   */
   private Method pickBetterSetter(Method setter1, Method setter2, String property) {
     if (setter1 == null) {
       return setter2;
@@ -197,6 +226,7 @@ public class Reflector {
     if (paramType2.isAssignableFrom(paramType1)) {
       return setter1;
     }
+    // 到这里就是mybatis处理不了
     MethodInvoker invoker = new AmbiguousMethodInvoker(setter1,
         MessageFormat.format(
             "Ambiguous setters defined for property ''{0}'' in class ''{1}'' with types ''{2}'' and ''{3}''.", property,
@@ -204,6 +234,7 @@ public class Reflector {
     setMethods.put(property, invoker);
     Type[] paramTypes = TypeParameterResolver.resolveParamTypes(setter1, type);
     setTypes.put(property, typeToClass(paramTypes[0]));
+    // 返回null
     return null;
   }
 
@@ -214,6 +245,11 @@ public class Reflector {
     setTypes.put(name, typeToClass(paramTypes[0]));
   }
 
+  /**
+   * 将Type转换成Class
+   * @param src
+   * @return
+   */
   private Class<?> typeToClass(Type src) {
     Class<?> result = null;
     if (src instanceof Class) {
@@ -238,19 +274,23 @@ public class Reflector {
   private void addFields(Class<?> clazz) {
     Field[] fields = clazz.getDeclaredFields();
     for (Field field : fields) {
+      // 如果setMethods中没有这个属性对应的set方法，那么就添加到setMethods中
       if (!setMethods.containsKey(field.getName())) {
         // issue #379 - removed the check for final because JDK 1.5 allows
         // modification of final fields through reflection (JSR-133). (JGB)
         // pr #16 - final static can only be set by the classloader
         int modifiers = field.getModifiers();
+        // 筛选出不是final和static的字段
         if ((!Modifier.isFinal(modifiers) || !Modifier.isStatic(modifiers))) {
           addSetField(field);
         }
       }
       if (!getMethods.containsKey(field.getName())) {
+        // 封装信息到getMethods中和getTypes中
         addGetField(field);
       }
     }
+    // 递归处理，将该类的所有父类的字段都加进去
     if (clazz.getSuperclass() != null) {
       addFields(clazz.getSuperclass());
     }
@@ -258,6 +298,7 @@ public class Reflector {
 
   private void addSetField(Field field) {
     if (isValidPropertyName(field.getName())) {
+      // 封装信息到setMethods中和setTypes中
       setMethods.put(field.getName(), new SetFieldInvoker(field));
       Type fieldType = TypeParameterResolver.resolveFieldType(field, type);
       setTypes.put(field.getName(), typeToClass(fieldType));

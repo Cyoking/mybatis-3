@@ -362,4 +362,17 @@ class ReflectorTest {
         "Ambiguous setters defined for property 'bool' in class '" + Bean.class.getName().replace("$", "\\$")
             + "' with types '(java.lang.Integer|boolean)' and '(java.lang.Integer|boolean)'\\.");
   }
+
+  @Test
+  public void test123(){
+    class A {
+      public void setId(Object id){
+
+      }
+      public void setId(Integer id){
+
+      }
+    }
+    System.out.println(new Reflector(A.class).getGetterType("id"));
+  }
 }
