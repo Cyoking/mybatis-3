@@ -32,6 +32,7 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
  */
 public class MetaObject {
 
+  // 1. 原始的JavaBean对象
   private final Object originalObject;
   private final ObjectWrapper objectWrapper;
   private final ObjectFactory objectFactory;

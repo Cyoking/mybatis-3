@@ -373,6 +373,6 @@ class ReflectorTest {
 
       }
     }
-    System.out.println(new Reflector(A.class).getGetterType("id"));
+    System.out.println(new Reflector(A.class).getSetterType("id"));
   }
 }

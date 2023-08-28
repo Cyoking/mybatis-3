@@ -56,18 +56,24 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
   private <T> T instantiateClass(Class<T> type, List<Class<?>> constructorArgTypes, List<Object> constructorArgs) {
     try {
       Constructor<T> constructor;
+      // 默认构造方法
       if (constructorArgTypes == null || constructorArgs == null) {
+        // 这里获取的是默认构造方法
         constructor = type.getDeclaredConstructor();
         try {
           return constructor.newInstance();
         } catch (IllegalAccessException e) {
+          // 如果能访问，设置一下Accessible，为什么不一来就设置，因为有些类是直接可以访问的
+          // 一来就设置就会浪费下面检查的性能
           if (Reflector.canControlMemberAccessible()) {
             constructor.setAccessible(true);
             return constructor.newInstance();
           }
+          // 如果不能设置直接抛异常
           throw e;
         }
       }
+      // 有参构造
       constructor = type.getDeclaredConstructor(constructorArgTypes.toArray(new Class[0]));
       try {
         return constructor.newInstance(constructorArgs.toArray(new Object[0]));
@@ -79,6 +85,7 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
         throw e;
       }
     } catch (Exception e) {
+      // 对上面代码抛出异常
       String argTypes = Optional.ofNullable(constructorArgTypes).orElseGet(Collections::emptyList).stream()
           .map(Class::getSimpleName).collect(Collectors.joining(","));
       String argValues = Optional.ofNullable(constructorArgs).orElseGet(Collections::emptyList).stream()

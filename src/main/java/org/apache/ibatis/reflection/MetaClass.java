@@ -28,6 +28,10 @@ import org.apache.ibatis.reflection.property.PropertyTokenizer;
 
 /**
  * @author Clinton Begin
+ * 封装Class的元信息
+ * 主要提供获取类中属性描述信息的功能，依赖于Reflector
+ * 里面的大部分方法都是依赖于PropertyTokenizer解析表达式，然后递归查找，查找的过程中会依赖于Reflector的方法
+ * 主要是解析成 user.id 这样的对象
  */
 public class MetaClass {
 
