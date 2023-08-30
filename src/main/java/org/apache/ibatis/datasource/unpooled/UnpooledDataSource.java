@@ -38,18 +38,18 @@ import org.apache.ibatis.io.Resources;
  */
 public class UnpooledDataSource implements DataSource {
 
-  private ClassLoader driverClassLoader;
-  private Properties driverProperties;
-  private static final Map<String, Driver> registeredDrivers = new ConcurrentHashMap<>();
+  private ClassLoader driverClassLoader; // 加载 Driver 类的类加载器。
+  private Properties driverProperties; // 数据库连接驱动的相关配置。
+  private static final Map<String, Driver> registeredDrivers = new ConcurrentHashMap<>(); // 缓存所有已注册的数据库连接驱动。
 
   private String driver;
   private String url;
   private String username;
   private String password;
 
-  private Boolean autoCommit;
-  private Integer defaultTransactionIsolationLevel;
-  private Integer defaultNetworkTimeout;
+  private Boolean autoCommit; // 是否自动提交事务。
+  private Integer defaultTransactionIsolationLevel; // 事务隔离级别。
+  private Integer defaultNetworkTimeout; // 网络超时时间。
 
   static {
     Enumeration<Driver> drivers = DriverManager.getDrivers();
@@ -224,16 +224,25 @@ public class UnpooledDataSource implements DataSource {
   }
 
   private Connection doGetConnection(Properties properties) throws SQLException {
+    // 初始化数据库驱动
     initializeDriver();
+    // 创建数据库连接
     Connection connection = DriverManager.getConnection(url, properties);
+    // 配置数据库连接
     configureConnection(connection);
     return connection;
   }
 
+  /**
+   * 完成了 JDBC 驱动的初始化，其中会创建配置中指定的 Driver 对象，
+   * 并将其注册到 DriverManager 以及上面介绍的 UnpooledDataSource.registeredDrivers 集合中保存；
+   * @throws SQLException
+   */
   private synchronized void initializeDriver() throws SQLException {
     if (!registeredDrivers.containsKey(driver)) {
       Class<?> driverType;
       try {
+        // 加载驱动类
         if (driverClassLoader != null) {
           driverType = Class.forName(driver, true, driverClassLoader);
         } else {
@@ -241,6 +250,7 @@ public class UnpooledDataSource implements DataSource {
         }
         // DriverManager requires the driver to be loaded via the system ClassLoader.
         // https://www.kfu.com/~nsayer/Java/dyn-jdbc.html
+        // 实例化驱动对象
         Driver driverInstance = (Driver) driverType.getDeclaredConstructor().newInstance();
         DriverManager.registerDriver(new DriverProxy(driverInstance));
         registeredDrivers.put(driver, driverInstance);
@@ -250,6 +260,11 @@ public class UnpooledDataSource implements DataSource {
     }
   }
 
+  /**
+   * 对数据库连接进行一系列配置，例如，数据库连接超时时长、事务是否自动提交以及使用的事务隔离级别。
+   * @param conn
+   * @throws SQLException
+   */
   private void configureConnection(Connection conn) throws SQLException {
     if (defaultNetworkTimeout != null) {
       conn.setNetworkTimeout(Executors.newSingleThreadExecutor(), defaultNetworkTimeout);

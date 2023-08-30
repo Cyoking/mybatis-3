@@ -54,9 +54,21 @@ import org.apache.ibatis.session.Configuration;
  */
 public final class TypeHandlerRegistry {
 
+  // 该集合记录了 JdbcType 与 TypeHandler 之间的关联关系。
+  // 在从 ResultSet 中读取数据的时候就会根据 JDBC 类型查找对应的 TypeHandler，将数据转换成 Java 类型。
   private final Map<JdbcType, TypeHandler<?>> jdbcTypeHandlerMap = new EnumMap<>(JdbcType.class);
+
+  /**
+   * 该集合第一层 Key 是需要转换的 Java 类型，第二层 Key 是转换的目标 JdbcType，最终的 Value 是完成此次转换时所需要使用的 TypeHandler 对象。
+   * 那为什么要有两层 Map 的设计呢？这里我们举个例子：Java 类型中的 String 可能转换成数据库中的 varchar、char、text 等多种类型，
+   * 存在一对多关系，所以就可能有不同的 TypeHandler 实现。
+   */
   private final Map<Type, Map<JdbcType, TypeHandler<?>>> typeHandlerMap = new ConcurrentHashMap<>();
   private final TypeHandler<Object> unknownTypeHandler;
+
+  /**
+   * 该集合记录了全部 TypeHandler 的类型以及对应的 TypeHandler 实例对象。
+   */
   private final Map<Class<?>, TypeHandler<?>> allTypeHandlersMap = new HashMap<>();
 
   private static final Map<JdbcType, TypeHandler<?>> NULL_TYPE_HANDLER_MAP = Collections.emptyMap();
@@ -237,17 +249,22 @@ public final class TypeHandlerRegistry {
   @SuppressWarnings("unchecked")
   private <T> TypeHandler<T> getTypeHandler(Type type, JdbcType jdbcType) {
     if (ParamMap.class.equals(type)) {
+      // 过滤掉ParamMap类型
       return null;
     }
+    // 根据Java类型查找对应的TypeHandler集合
     Map<JdbcType, TypeHandler<?>> jdbcHandlerMap = getJdbcHandlerMap(type);
     TypeHandler<?> handler = null;
     if (jdbcHandlerMap != null) {
+      // 根据JdbcType类型查找对应的TypeHandler实例
       handler = jdbcHandlerMap.get(jdbcType);
       if (handler == null) {
+        // 没有对应的TypeHandler实例，则使用null对应的TypeHandler
         handler = jdbcHandlerMap.get(null);
       }
       if (handler == null) {
         // #591
+        // 如果jdbcHandlerMap只注册了一个TypeHandler，则使用此TypeHandler对象
         handler = pickSoleHandler(jdbcHandlerMap);
       }
     }
@@ -260,9 +277,10 @@ public final class TypeHandlerRegistry {
     if (jdbcHandlerMap != null) {
       return NULL_TYPE_HANDLER_MAP.equals(jdbcHandlerMap) ? null : jdbcHandlerMap;
     }
+    // 初始化指定Java类型的TypeHandler集合
     if (type instanceof Class) {
       Class<?> clazz = (Class<?>) type;
-      if (Enum.class.isAssignableFrom(clazz)) {
+      if (Enum.class.isAssignableFrom(clazz)) {  // 针对枚举类型的处理
         Class<?> enumClass = clazz.isAnonymousClass() ? clazz.getSuperclass() : clazz;
         jdbcHandlerMap = getJdbcHandlerMapForEnumInterfaces(enumClass, enumClass);
         if (jdbcHandlerMap == null) {
@@ -270,9 +288,11 @@ public final class TypeHandlerRegistry {
           return typeHandlerMap.get(enumClass);
         }
       } else {
+        // 查找父类关联的TypeHandler集合，并将其作为clazz对应的TypeHandler集合
         jdbcHandlerMap = getJdbcHandlerMapForSuperclass(clazz);
       }
     }
+    // 如果上述查找皆失败，则以NULL_TYPE_HANDLER_MAP作为clazz对应的TypeHandler集合
     typeHandlerMap.put(type, jdbcHandlerMap == null ? NULL_TYPE_HANDLER_MAP : jdbcHandlerMap);
     return jdbcHandlerMap;
   }
@@ -393,14 +413,17 @@ public final class TypeHandlerRegistry {
   }
 
   private void register(Type javaType, JdbcType jdbcType, TypeHandler<?> handler) {
+    // 根据指定的Java类型，从typeHandlerMap集合中获取相应的TypeHandler集合
     if (javaType != null) {
       Map<JdbcType, TypeHandler<?>> map = typeHandlerMap.get(javaType);
       if (map == null || map == NULL_TYPE_HANDLER_MAP) {
         map = new HashMap<>();
       }
+      // 将TypeHandler实例记录到typeHandlerMap集合中
       map.put(jdbcType, handler);
       typeHandlerMap.put(javaType, map);
     }
+    // 向allTypeHandlersMap集合注册TypeHandler类型和对应的TypeHandler对象
     allTypeHandlersMap.put(handler.getClass(), handler);
   }
 
