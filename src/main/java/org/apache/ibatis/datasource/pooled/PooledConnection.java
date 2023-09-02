@@ -32,13 +32,23 @@ class PooledConnection implements InvocationHandler {
   private static final Class<?>[] IFACES = { Connection.class };
 
   private final int hashCode;
+  /**
+   * 记录当前 PooledConnection 对象归属的 PooledDataSource 对象。
+   * 也就是说，当前的 PooledConnection 是由该 PooledDataSource 对象创建的；
+   * 在通过 close() 方法关闭当前 PooledConnection 的时候，
+   * 当前 PooledConnection 会被返还给该 PooledDataSource 对象。
+   */
   private final PooledDataSource dataSource;
-  private final Connection realConnection;
-  private final Connection proxyConnection;
-  private long checkoutTimestamp;
-  private long createdTimestamp;
-  private long lastUsedTimestamp;
+  private final Connection realConnection; // 真正的数据库连接
+  private final Connection proxyConnection; // 代理的数据库连接
+  private long checkoutTimestamp; // CheckoutTime 表示的是使用方从连接池中取出连接到归还连接的总时长，也就是连接被使用的时长
+  private long createdTimestamp; // 连接创建的时间戳
+  private long lastUsedTimestamp; // 连接最后一次被使用的时间戳
+
+  // 数据库连接的标识。该标识是由数据库 URL、username 和 password 三部分组合计算出来的 hash 值，主要用于连接对象确认归属的连接池
   private int connectionTypeCode;
+  //用于标识 PooledConnection 对象是否有效。该字段的主要目的是防止使用方将连接归还给连接池之后，
+  // 依然保留该 PooledConnection 对象的引用并继续通过该 PooledConnection 对象操作数据库。
   private boolean valid;
 
   /**
