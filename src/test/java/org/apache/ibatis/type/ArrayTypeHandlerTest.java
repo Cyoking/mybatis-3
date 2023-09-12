@@ -27,6 +27,8 @@ import static org.mockito.Mockito.when;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -41,6 +43,8 @@ class ArrayTypeHandlerTest extends BaseTypeHandlerTest {
   @Override
   @Test
   public void shouldSetParameter() throws Exception {
+    ArrayList<Object> objects = new ArrayList<>();
+    Iterator<Object> iterator = objects.iterator();
     TYPE_HANDLER.setParameter(ps, 1, mockArray, null);
     verify(ps).setArray(1, mockArray);
   }

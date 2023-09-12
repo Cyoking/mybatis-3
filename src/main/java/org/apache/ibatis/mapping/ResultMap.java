@@ -37,18 +37,22 @@ import org.apache.ibatis.session.Configuration;
 public class ResultMap {
   private Configuration configuration;
 
-  private String id;
-  private Class<?> type;
-  private List<ResultMapping> resultMappings;
+  private String id; // 当前 <resultMap> 标签的 id 属性值。
+  private Class<?> type; // 当前 <resultMap> 的 type 属性值。
+  private List<ResultMapping> resultMappings; // 维护了整个<resultMap> 标签解析之后得到的全部映射关系，也就是全部 ResultMapping 对象。
+  /**
+   * 维护了与唯一标识相关的映射，例如，<id> 标签、<constructor> 标签下的 <idArg> 子标签解析得到的 ResultMapping 对象。如果没有定义 <id> 等唯一性标签，
+   * 则由 resultMappings 集合中全部映射关系来确定一条记录的唯一性，即 idResultMappings 集合与 resulMappings 集合相同。
+   */
   private List<ResultMapping> idResultMappings;
-  private List<ResultMapping> constructorResultMappings;
-  private List<ResultMapping> propertyResultMappings;
-  private Set<String> mappedColumns;
+  private List<ResultMapping> constructorResultMappings; // 维护了 <constructor> 标签下全部子标签定义的映射关系。
+  private List<ResultMapping> propertyResultMappings; // 维护了不带 Constructor 标志的映射关系。
+  private Set<String> mappedColumns; // 维护了所有映射关系中涉及的 column 属性值，也就是所有的列名（或别名）。
   private Set<String> mappedProperties;
-  private Discriminator discriminator;
-  private boolean hasNestedResultMaps;
-  private boolean hasNestedQueries;
-  private Boolean autoMapping;
+  private Discriminator discriminator; // 对应 <discriminator> 标签。
+  private boolean hasNestedResultMaps; // 当前 <resultMap> 标签是否嵌套了其他 <resultMap> 标签，即这个映射关系中指定了 resultMap属性，且未指定 resultSet 属性。
+  private boolean hasNestedQueries; // 当前 <resultMap> 标签是否含有嵌套查询。也就是说，这个映射关系中是否指定了 select 属性。
+  private Boolean autoMapping; // 当前 ResultMap 是否开启自动映射的功能。
 
   private ResultMap() {
   }

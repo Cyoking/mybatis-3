@@ -31,20 +31,25 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
 public class ResultMapping {
 
   private Configuration configuration;
-  private String property;
-  private String column;
-  private Class<?> javaType;
-  private JdbcType jdbcType;
-  private TypeHandler<?> typeHandler;
+  private String property; // 当前标签中指定的 property 属性值，指向的是与 column 列对应的属性名称。
+  private String column; // 当前标签中指定的 column 属性值，指向的是数据库表中的一个列名（或是别名）。
+  private Class<?> javaType; // （Class<?> 类型）
+  private JdbcType jdbcType; // （JdbcType 类型）
+  private TypeHandler<?> typeHandler; // 当前标签的 typeHandler 属性值，这里指定的 TypeHandler 会覆盖默认的类型处理器。
+  /*
+    当前标签的 resultMap 属性值，通过该属性我们可以引用另一个 <resultMap> 标签的id，
+    然后由这个被引用的<resultMap> 标签映射结果集中的一部分列。
+    这样，我们就可以将一个查询结果集映射成多个对象，同时确定这些对象之间的关联关系。
+   */
   private String nestedResultMapId;
   private String nestedQueryId;
   private Set<String> notNullColumns;
-  private String columnPrefix;
+  private String columnPrefix; // 当前标签的 columnPrefix 属性值，记录了表中列名的公共前缀。
   private List<ResultFlag> flags;
   private List<ResultMapping> composites;
-  private String resultSet;
+  private String resultSet; // 当前标签的 resultSet 属性值。
   private String foreignColumn;
-  private boolean lazy;
+  private boolean lazy; // 当前标签的fetchType 属性，表示是否延迟加载当前标签对应的列。
 
   ResultMapping() {
   }

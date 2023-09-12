@@ -59,9 +59,13 @@ public class SimpleExecutor extends BaseExecutor {
     Statement stmt = null;
     try {
       Configuration configuration = ms.getConfiguration();
+      // 通过 newStatementHandler() 方法创建 StatementHandler 对象，其中会根据 MappedStatement.statementType 配置创建相应的
+      // StatementHandler 实现对象，并添加 RoutingStatementHandler 装饰器。
       StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler,
           boundSql);
+      // 通过 prepareStatement() 方法初始化 Statement 对象，其中还依赖 ParameterHandler 填充 SQL 语句中的占位符。
       stmt = prepareStatement(handler, ms.getStatementLog());
+      // 通过 StatementHandler.query() 方法执行 SQL 语句
       return handler.query(stmt, resultHandler);
     } finally {
       closeStatement(stmt);

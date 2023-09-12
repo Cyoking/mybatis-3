@@ -63,6 +63,12 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     return rows;
   }
 
+  /**
+   * batch() 方法调用的是 Statement.addBatch() 方法添加批量执行的 SQL 语句，但并不是立即执行，
+   * 而是等待 Statement.executeBatch() 方法执行时才会批量执行
+   * @param statement
+   * @throws SQLException
+   */
   @Override
   public void batch(Statement statement) throws SQLException {
     String sql = boundSql.getSql();
@@ -71,9 +77,10 @@ public class SimpleStatementHandler extends BaseStatementHandler {
 
   @Override
   public <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException {
+    // 获取SQL语句
     String sql = boundSql.getSql();
-    statement.execute(sql);
-    return resultSetHandler.handleResultSets(statement);
+    statement.execute(sql); // 执行SQL语句
+    return resultSetHandler.handleResultSets(statement);  // 处理ResultSet映射，得到结果对象
   }
 
   @Override
@@ -83,6 +90,12 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     return resultSetHandler.handleCursorResultSets(statement);
   }
 
+  /**
+   * SimpleStatementHandler 会直接通过 JDBC Connection 创建 Statement 对象，这个对象也是后续 SimpleStatementHandler 其他方法的入参。
+   * @param connection
+   * @return
+   * @throws SQLException
+   */
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
     if (mappedStatement.getResultSetType() == ResultSetType.DEFAULT) {
@@ -91,6 +104,10 @@ public class SimpleStatementHandler extends BaseStatementHandler {
     return connection.createStatement(mappedStatement.getResultSetType().getValue(), ResultSet.CONCUR_READ_ONLY);
   }
 
+  /**
+   * 因为这个类不能维护的 SQL 语句不能存在“?”占位符，所以这里是空实现
+   * @param statement
+   */
   @Override
   public void parameterize(Statement statement) {
     // N/A

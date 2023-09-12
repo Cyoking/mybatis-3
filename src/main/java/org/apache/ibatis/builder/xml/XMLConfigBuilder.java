@@ -53,10 +53,10 @@ import org.apache.ibatis.type.JdbcType;
  */
 public class XMLConfigBuilder extends BaseBuilder {
 
-  private boolean parsed;
-  private final XPathParser parser;
-  private String environment;
-  private final ReflectorFactory localReflectorFactory = new DefaultReflectorFactory();
+  private boolean parsed; // 状态标识字段，记录当前 XMLConfigBuilder 对象是否已经成功解析完 mybatis-config.xml 配置文件。
+  private final XPathParser parser; // XPathParser 对象是一个 XML 解析器，这里的 parser 对象就是用来解析 mybatis-config.xml 配置文件的。
+  private String environment; // 标签定义的环境名称。
+  private final ReflectorFactory localReflectorFactory = new DefaultReflectorFactory(); // ReflectorFactory 接口的核心功能是实现对 Reflector 对象的创建和缓存。
 
   public XMLConfigBuilder(Reader reader) {
     this(reader, null, null);
@@ -114,21 +114,22 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void parseConfiguration(XNode root) {
     try {
       // issue #117 read properties first
+      // 解析 <properties> 标签
       propertiesElement(root.evalNode("properties"));
-      Properties settings = settingsAsProperties(root.evalNode("settings"));
+      Properties settings = settingsAsProperties(root.evalNode("settings")); // 解析 <settings> 标签
       loadCustomVfs(settings);
-      loadCustomLogImpl(settings);
-      typeAliasesElement(root.evalNode("typeAliases"));
-      pluginElement(root.evalNode("plugins"));
-      objectFactoryElement(root.evalNode("objectFactory"));
-      objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
-      reflectorFactoryElement(root.evalNode("reflectorFactory"));
+      loadCustomLogImpl(settings); // 处理日志相关组件
+      typeAliasesElement(root.evalNode("typeAliases")); // 解析 <typeAliases> 标签
+      pluginElement(root.evalNode("plugins")); // 解析 <plugins> 标签
+      objectFactoryElement(root.evalNode("objectFactory")); // 解析 <objectFactory> 标签
+      objectWrapperFactoryElement(root.evalNode("objectWrapperFactory")); // 解析 <objectWrapperFactory> 标签
+      reflectorFactoryElement(root.evalNode("reflectorFactory")); // 解析 <reflectorFactory> 标签
       settingsElement(settings);
       // read it after objectFactory and objectWrapperFactory issue #631
-      environmentsElement(root.evalNode("environments"));
-      databaseIdProviderElement(root.evalNode("databaseIdProvider"));
-      typeHandlerElement(root.evalNode("typeHandlers"));
-      mapperElement(root.evalNode("mappers"));
+      environmentsElement(root.evalNode("environments")); // 解析 <environments> 标签
+      databaseIdProviderElement(root.evalNode("databaseIdProvider")); // 解析 <databaseIdProvider> 标签
+      typeHandlerElement(root.evalNode("typeHandlers")); // 解析 <typeHandlers> 标签
+      mapperElement(root.evalNode("mappers")); // 解析 <mappers> 标签
     } catch (Exception e) {
       throw new BuilderException("Error parsing SQL Mapper Configuration. Cause: " + e, e);
     }
@@ -138,6 +139,8 @@ public class XMLConfigBuilder extends BaseBuilder {
     if (context == null) {
       return new Properties();
     }
+    // 处理<settings>标签的所有子标签，也就是<setting>标签，将其name属性和value属性
+    // 整理到Properties对象中保存
     Properties props = context.getChildrenAsProperties();
     // Check that all settings are known to the configuration class
     MetaClass metaConfig = MetaClass.forClass(Configuration.class, localReflectorFactory);
@@ -382,14 +385,17 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void mapperElement(XNode parent) throws Exception {
     if (parent != null) {
-      for (XNode child : parent.getChildren()) {
-        if ("package".equals(child.getName())) {
+      for (XNode child : parent.getChildren()) { // 遍历每个子标签
+        if ("package".equals(child.getName())) { // 如果指定了<package>子标签，则会扫描指定包内全部Java类型
           String mapperPackage = child.getStringAttribute("name");
           configuration.addMappers(mapperPackage);
         } else {
+          // 解析<mapper>子标签，这里会获取resource、url、class三个属性，这三个属性互斥
           String resource = child.getStringAttribute("resource");
           String url = child.getStringAttribute("url");
           String mapperClass = child.getStringAttribute("class");
+          // 如果<mapper>子标签指定了resource或是url属性，都会创建XMLMapperBuilder对象，
+          // 然后使用这个XMLMapperBuilder实例解析指定的Mapper.xml配置文件
           if (resource != null && url == null && mapperClass == null) {
             ErrorContext.instance().resource(resource);
             try (InputStream inputStream = Resources.getResourceAsStream(resource)) {

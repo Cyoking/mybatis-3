@@ -97,14 +97,16 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   public void parse() {
     if (!configuration.isResourceLoaded(resource)) {
+      // 执行 configurationElement() 方法解析整个Mapper.xml 映射文件的内容；
       configurationElement(parser.evalNode("/mapper"));
+      // 获取当前 Mapper.xml 映射文件指定的 Mapper 接口，并进行注册；
       configuration.addLoadedResource(resource);
       bindMapperForNamespace();
     }
 
-    parsePendingResultMaps();
-    parsePendingCacheRefs();
-    parsePendingStatements();
+    parsePendingResultMaps(); // 处理 configurationElement() 方法中解析失败的 <resultMap> 标签；
+    parsePendingCacheRefs();  // 处理 configurationElement() 方法中解析失败的 <cache-ref> 标签；
+    parsePendingStatements(); // 处理 configurationElement() 方法中解析失败的SQL 语句标签。
   }
 
   public XNode getSqlFragment(String refid) {

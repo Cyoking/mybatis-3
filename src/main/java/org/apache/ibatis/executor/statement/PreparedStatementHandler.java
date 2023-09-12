@@ -42,14 +42,15 @@ public class PreparedStatementHandler extends BaseStatementHandler {
     super(executor, mappedStatement, parameter, rowBounds, resultHandler, boundSql);
   }
 
+
   @Override
   public int update(Statement statement) throws SQLException {
     PreparedStatement ps = (PreparedStatement) statement;
-    ps.execute();
-    int rows = ps.getUpdateCount();
-    Object parameterObject = boundSql.getParameterObject();
+    ps.execute(); // 执行SQL语句，修改数据
+    int rows = ps.getUpdateCount(); // 获取影响行数
+    Object parameterObject = boundSql.getParameterObject(); // 获取实参对象
     KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
-    keyGenerator.processAfter(executor, mappedStatement, ps, parameterObject);
+    keyGenerator.processAfter(executor, mappedStatement, ps, parameterObject);  // 执行KeyGenerator
     return rows;
   }
 
@@ -73,6 +74,12 @@ public class PreparedStatementHandler extends BaseStatementHandler {
     return resultSetHandler.handleCursorResultSets(ps);
   }
 
+  /**
+   * 这里创建的都是 prepareStatement, 所以后面各个类接受的 Statement 都是 prepareStatement 类型
+   * @param connection
+   * @return
+   * @throws SQLException
+   */
   @Override
   protected Statement instantiateStatement(Connection connection) throws SQLException {
     String sql = boundSql.getSql();

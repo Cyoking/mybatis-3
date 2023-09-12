@@ -58,16 +58,21 @@ public class MapperRegistry {
   }
 
   public <T> void addMapper(Class<T> type) {
+    //1、判断传入的type是否是一个接口
     if (type.isInterface()) {
+      // 2、判断knownMappers是否已经存在，若存在则抛出已存在异常。
       if (hasMapper(type)) {
         throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
       }
+      // 3、设置是否加载完成标识，final会根据是否加载完成来区别是否删除该type的设置
       boolean loadCompleted = false;
       try {
+        // 4、将该接口put到knownMappers中
         knownMappers.put(type, new MapperProxyFactory<>(type));
         // It's important that the type is added before the parser is run
         // otherwise the binding may automatically be attempted by the
         // mapper parser. If the type is already known, it won't try.
+        //  5、调用MapperAnnotationBuilder构造方法，并进行解析。（具体处理逻辑会在builder模块中展开）
         MapperAnnotationBuilder parser = new MapperAnnotationBuilder(config, type);
         parser.parse();
         loadCompleted = true;
@@ -97,7 +102,7 @@ public class MapperRegistry {
    *          the package name
    * @param superType
    *          the super type
-   *
+   * 根据指定包名及父类类型添加mapper
    * @since 3.2.2
    */
   public void addMappers(String packageName, Class<?> superType) {
@@ -114,7 +119,7 @@ public class MapperRegistry {
    *
    * @param packageName
    *          the package name
-   *
+   * 默认superType为Object.class,这样该包下的所有接口均会被添加到knownMappers中
    * @since 3.2.2
    */
   public void addMappers(String packageName) {

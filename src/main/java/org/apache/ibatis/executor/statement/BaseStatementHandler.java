@@ -82,6 +82,13 @@ public abstract class BaseStatementHandler implements StatementHandler {
     return parameterHandler;
   }
 
+  /**
+   * 主要作用是创建一个statement，并且定义了一个抽象的方法 instantiateStatement 让子类可以去初始化，这个prepare里面就设置的timeout等信息
+   * @param connection
+   * @param transactionTimeout
+   * @return
+   * @throws SQLException
+   */
   @Override
   public Statement prepare(Connection connection, Integer transactionTimeout) throws SQLException {
     ErrorContext.instance().sql(boundSql.getSql());
