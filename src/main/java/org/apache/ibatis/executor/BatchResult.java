@@ -29,7 +29,7 @@ public class BatchResult {
   private final String sql;
   private final List<Object> parameterObjects;
 
-  private int[] updateCounts;
+  private int[] updateCounts; // 记录关联 Statement 对象执行批处理的结果。因为批处理的 SQL 语句可能不止一条，所以 updateCounts 是一个数组。
 
   public BatchResult(MappedStatement mappedStatement, String sql) {
     this.mappedStatement = mappedStatement;

@@ -50,7 +50,7 @@ public class DefaultSqlSession implements SqlSession {
   private final Executor executor;
 
   private final boolean autoCommit;
-  private boolean dirty;
+  private boolean dirty; // 标识缓存中是否有脏数据，它在执行 update() 方法修改数据时会被设置为 true，并在后续参与事务控制，决定当前事务是否需要提交或回滚。
   private List<Cursor<?>> cursorList;
 
   public DefaultSqlSession(Configuration configuration, Executor executor, boolean autoCommit) {

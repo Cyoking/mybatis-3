@@ -114,10 +114,15 @@ public class DefaultSqlSessionFactory implements SqlSessionFactory {
         // or databases won't support transactions
         autoCommit = true;
       }
+      // 获取Environment对象
       final Environment environment = configuration.getEnvironment();
+      // 获取TransactionFactory对象
       final TransactionFactory transactionFactory = getTransactionFactoryFromEnvironment(environment);
+      // 从数据源中创建Transaction
       final Transaction tx = transactionFactory.newTransaction(connection);
+      // 根据配置创建Executor对象
       final Executor executor = configuration.newExecutor(tx, execType);
+      // 在Executor的基础上创建DefaultSqlSession对象
       return new DefaultSqlSession(configuration, executor, autoCommit);
     } catch (Exception e) {
       throw ExceptionFactory.wrapException("Error opening session.  Cause: " + e, e);

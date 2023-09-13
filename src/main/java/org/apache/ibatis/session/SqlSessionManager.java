@@ -30,6 +30,7 @@ import org.apache.ibatis.executor.BatchResult;
 import org.apache.ibatis.reflection.ExceptionUtil;
 
 /**
+ * 看作是SqlSessionFactory的装饰器
  * @author Larry Meadors
  */
 public class SqlSessionManager implements SqlSessionFactory, SqlSession {
@@ -74,6 +75,7 @@ public class SqlSessionManager implements SqlSessionFactory, SqlSession {
   }
 
   public void startManagedSession() {
+    //  调用底层被装饰的SqlSessionFactory创建SqlSession对象，并绑定到localSqlSession字段中
     this.localSqlSession.set(openSession());
   }
 
@@ -279,10 +281,13 @@ public class SqlSessionManager implements SqlSessionFactory, SqlSession {
 
   @Override
   public void commit() {
+    // 获取当前线程绑定的SqlSession对象
     final SqlSession sqlSession = localSqlSession.get();
+    // 如果当前未绑定SqlSession对象，则不能用SqlSessionManager来控制事务
     if (sqlSession == null) {
       throw new SqlSessionException("Error:  Cannot commit.  No managed session is started.");
     }
+    // 如果当前线程绑定了SqlSession，则可以通过SqlSessionManager来提交事务
     sqlSession.commit();
   }
 
@@ -340,18 +345,27 @@ public class SqlSessionManager implements SqlSessionFactory, SqlSession {
       // Prevent Synthetic Access
     }
 
+    /**
+     * 会首先通过 localSqlSession 字段检查当前线程是否已经绑定了 SqlSession，如果绑定了，则直接使用绑定的 SqlSession；如果没有绑定，则通过 openSession() 方法创建新 SqlSession 完成数据库操作。具体实现如下：
+     * @return
+     * @throws Throwable
+     */
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+      // 尝试从localSqlSession变量中获取当前线程绑定的SqlSession对象
       final SqlSession sqlSession = SqlSessionManager.this.localSqlSession.get();
       if (sqlSession != null) {
         try {
+          // 当前线程已经绑定了SqlSession，直接使用即可
           return method.invoke(sqlSession, args);
         } catch (Throwable t) {
           throw ExceptionUtil.unwrapThrowable(t);
         }
       }
+      // 通过openSession()方法创建新SqlSession对象
       try (SqlSession autoSqlSession = openSession()) {
         try {
+          // 通过新建的SqlSession对象完成数据库操作
           final Object result = method.invoke(autoSqlSession, args);
           autoSqlSession.commit();
           return result;

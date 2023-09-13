@@ -27,6 +27,7 @@ public class InterceptorChain {
   private final List<Interceptor> interceptors = new ArrayList<>();
 
   public Object pluginAll(Object target) {
+    // 遍历interceptors集合，调用每个Interceptor对象的plugin()方法
     for (Interceptor interceptor : interceptors) {
       target = interceptor.plugin(target);
     }
