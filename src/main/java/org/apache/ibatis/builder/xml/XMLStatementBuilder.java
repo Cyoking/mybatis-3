@@ -56,9 +56,17 @@ public class XMLStatementBuilder extends BaseBuilder {
   }
 
   public void parseStatementNode() {
+    //获取标签的id属性，如selectById，对应Mapper接口中的方法名称
     String id = context.getStringAttribute("id");
+    //获取databaseId属性，我们一般都没有写。
     String databaseId = context.getStringAttribute("databaseId");
 
+    /**
+     * 这段代码虽然不起眼，但是一定要进去看一下：其内部完成了对id的再次赋值，
+     * 处理的方式是：id=namespace+"."+id，也就是当前Mapper的完全限定名+"."+id，
+     * 比如我们之前例子中的com.raysonxin.dao.CompanyDao.selectById
+     * 这也是Mapper接口中不能存在重载方法的根本原因。
+     * */
     if (!databaseIdMatchesCurrent(id, databaseId, this.requiredDatabaseId)) {
       return;
     }
@@ -71,6 +79,10 @@ public class XMLStatementBuilder extends BaseBuilder {
     boolean resultOrdered = context.getBooleanAttribute("resultOrdered", false);
 
     // Include Fragments before parsing
+    /**
+     * 英文注释也说了，在sql解析前处理 include 标签，比如说，我们include了BaseColumns，
+     * 它会把这个include标签替换为BaseColumns内的sql内容
+     * */
     XMLIncludeTransformer includeParser = new XMLIncludeTransformer(configuration, builderAssistant);
     includeParser.applyIncludes(context.getNode());
 
@@ -81,6 +93,7 @@ public class XMLStatementBuilder extends BaseBuilder {
     LanguageDriver langDriver = getLanguageDriver(lang);
 
     // Parse selectKey after includes and remove them.
+    //处理selectKey，主要针对不同的数据库引擎做处理
     processSelectKeyNodes(id, parameterTypeClass, langDriver);
 
     // Parse the SQL (pre: <selectKey> and <include> were parsed and removed)
@@ -95,7 +108,18 @@ public class XMLStatementBuilder extends BaseBuilder {
               ? Jdbc3KeyGenerator.INSTANCE : NoKeyGenerator.INSTANCE;
     }
 
+    /**
+     * 到了关键步骤了：就是通过这句代码完成了从xml标签到SqlSource的转换，
+     * SqlSource是一个接口，这里返回的可能是DynamicSqlSource、也可能是RawSqlSource，
+     * 取决于xml标签中是否包含动态元素，比如 <if test=""></if>
+     * */
     SqlSource sqlSource = langDriver.createSqlSource(configuration, context, parameterTypeClass);
+
+    /**
+     * 下面这块代码会依次获取fetchSize、timeout、resultMap等属性，
+     * 需要注意的是，有些属性虽然我们没有设置，但是mybatis会设置默认值，
+     * 具体可以查看mybatis的官方说明。
+     */
     StatementType statementType = StatementType
         .valueOf(context.getStringAttribute("statementType", StatementType.PREPARED.toString()));
     Integer fetchSize = context.getIntAttribute("fetchSize");
@@ -117,6 +141,10 @@ public class XMLStatementBuilder extends BaseBuilder {
     String resultSets = context.getStringAttribute("resultSets");
     boolean dirtySelect = context.getBooleanAttribute("affectData", Boolean.FALSE);
 
+    /**
+     * 节点及属性都解析完成了，使用builderAssistant创建MappedStatement，
+     * 并保存到Configuration#mappedStatements。
+     * */
     builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType, fetchSize, timeout, parameterMap,
         parameterTypeClass, resultMap, resultTypeClass, resultSetTypeEnum, flushCache, useCache, resultOrdered,
         keyGenerator, keyProperty, keyColumn, databaseId, langDriver, resultSets, dirtySelect);

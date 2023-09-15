@@ -33,20 +33,81 @@ import org.apache.ibatis.session.Configuration;
  */
 public final class MappedStatement {
 
+  /**
+   * 对应所属mapper的资源路径，如我们示例中的CompanyMapper.xml
+   */
   private String resource;
+
+  /**
+   * mybatis全局的配置对象
+   */
   private Configuration configuration;
+
+  /**
+   * 当前MappedStatement的唯一识别ID，并且在同一个Configuration中是唯一的
+   * 它由Mapper类的完全限定名和Mapper方法名称拼接而成
+   */
   private String id;
+
+  /**
+   * mybatis每次从数据库中返回记录的大小，通过对该值的优化，可以提升查询效率
+   */
   private Integer fetchSize;
+
+  /**
+   * 当前MappedStatement执行时，数据库操作的超时时间
+   */
   private Integer timeout;
+
+  /**
+   * SQL声明的类型，决定当前MappedStatement由哪种类型的StatementHandler执行
+   * StatementType枚举有：STATEMENT, PREPARED, CALLABLE
+   * 默认值是：PREPARED
+   */
   private StatementType statementType;
+
+  /**
+   * 结果集处理类型，决定了结果集游标的移动方式：
+   * 只能向前移动、双向移动且对修改敏感、双向移动对修改不敏感。
+   */
   private ResultSetType resultSetType;
+
+  /**
+   * 存储我们定义的经过mybatis初步解析处理的sql语句，由若干sql节点构成，包含一些动态节点，如If条件语句。
+   * 在生成SqlSource之前，已经把<include></include>标签的内容转为了实际的文本对象
+   */
   private SqlSource sqlSource;
+
+  /**
+   * 二级缓存策略配置对象
+   */
   private Cache cache;
+
+  /**
+   * 参数映射，外部以何种形式对当前MappedStatement传参
+   */
   private ParameterMap parameterMap;
+
+  /**
+   * 结果映射列表，应该是只有一个的，不明白为啥是列表，可能是多个结果集返回时使用的。
+   */
   private List<ResultMap> resultMaps;
+
+  /**
+   * 是否要刷新缓存，将其设置为 true 后，只要语句被调用，都会导致本地缓存和二级缓存被清空
+   * 对select命令，默认值为false，对insert、update、delete默认为true。
+   */
   private boolean flushCacheRequired;
+
+  /**
+   * 将其设置为 true 后，将会导致本条语句的结果被二级缓存缓存起来，默认值：对 select 元素为 true。
+   */
   private boolean useCache;
   private boolean resultOrdered;
+
+  /**
+   * sql命令类型：如select、update、insert、delete等
+   */
   private SqlCommandType sqlCommandType;
   private KeyGenerator keyGenerator;
   private String[] keyProperties;
@@ -54,7 +115,15 @@ public final class MappedStatement {
   private boolean hasNestedResultMaps;
   private String databaseId;
   private Log statementLog;
+
+  /**
+   * 语言驱动，如xml。
+   */
   private LanguageDriver lang;
+
+  /**
+   * 结果集类型列表
+   */
   private String[] resultSets;
   private boolean dirtySelect;
 
@@ -317,7 +386,9 @@ public final class MappedStatement {
   }
 
   public BoundSql getBoundSql(Object parameterObject) {
+    // 获取BoundSql对象，BoundSql对象是对动态sql的解析
     BoundSql boundSql = sqlSource.getBoundSql(parameterObject);
+    // 获取参数映射
     List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
     if (parameterMappings == null || parameterMappings.isEmpty()) {
       boundSql = new BoundSql(configuration, boundSql.getSql(), parameterMap.getParameterMappings(), parameterObject);
