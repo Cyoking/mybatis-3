@@ -28,8 +28,8 @@ import org.apache.ibatis.cache.Cache;
 public class LruCache implements Cache {
 
   private final Cache delegate;
-  private Map<Object, Object> keyMap;
-  private Object eldestKey;
+  private Map<Object, Object> keyMap;  // 记录各个缓存条目最近的使用情况
+  private Object eldestKey; // 用来指向最近最少使用的 Key
 
   public LruCache(Cache delegate) {
     this.delegate = delegate;
@@ -54,6 +54,7 @@ public class LruCache implements Cache {
       protected boolean removeEldestEntry(Map.Entry<Object, Object> eldest) {
         boolean tooBig = size() > size;
         if (tooBig) {
+          // 已到达缓存上限，更新eldestKey字段，并返回true，LinkedHashMap会删除该Key
           eldestKey = eldest.getKey();
         }
         return tooBig;
@@ -85,8 +86,9 @@ public class LruCache implements Cache {
   }
 
   private void cycleKeyList(Object key) {
-    keyMap.put(key, key);
+    keyMap.put(key, key);  // 将KV数据写入keyMap集合
     if (eldestKey != null) {
+      // 如果eldestKey不为空，则将从底层Cache中删除
       delegate.removeObject(eldestKey);
       eldestKey = null;
     }

@@ -30,20 +30,59 @@ import org.apache.ibatis.session.ResultHandler;
  */
 public interface StatementHandler {
 
+  /**
+   * // 获取底层的 Statement 对象
+   * @param connection 数据库连接，一般通过事务管理器取获取
+   * @param transactionTimeout 事务超时时间
+   * @return 返回Statement对象
+   * @throws SQLException
+   */
   Statement prepare(Connection connection, Integer transactionTimeout) throws SQLException;
 
+  /**
+   * 设置 Statement 对象的参数, 对于普通的Statement是不需要的，对于PrepareStatement和CallableStatement才需要
+   * @param statement
+   * @throws SQLException
+   */
   void parameterize(Statement statement) throws SQLException;
 
+  /**
+   *  批量执行 SQL
+   * @param statement
+   * @throws SQLException
+   */
   void batch(Statement statement) throws SQLException;
 
+  /**
+   * 执行更新操作，返回影响的行数
+   * @param statement
+   * @return
+   * @throws SQLException
+   */
   int update(Statement statement) throws SQLException;
 
+  /**
+   * 执行查询操作，返回 ResultSet 对象会被ResultSetHandler处理
+   * @param statement
+   * @param resultHandler
+   * @return
+   * @param <E>
+   * @throws SQLException
+   */
   <E> List<E> query(Statement statement, ResultHandler resultHandler) throws SQLException;
 
   <E> Cursor<E> queryCursor(Statement statement) throws SQLException;
 
+  /**
+   * 获取 BoundSql 对象，包含 SQL 语句和参数映射
+   * @return
+   */
   BoundSql getBoundSql();
 
+  /**
+   * 获取 ParameterHandler 对象，用于处理参数映射
+   * @return
+   */
   ParameterHandler getParameterHandler();
 
 }

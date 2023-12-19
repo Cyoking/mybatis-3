@@ -42,10 +42,19 @@ public class Plugin implements InvocationHandler {
   }
 
   public static Object wrap(Object target, Interceptor interceptor) {
+    /*
+     * 获取插件类 @Signature 注解内容，并生成相应的映射结构。形如下面：
+     * {
+     *     Executor.class : [query, update, commit],
+     *     ParameterHandler.class : [getParameterObject, setParameters]
+     * }
+     */
     Map<Class<?>, Set<Method>> signatureMap = getSignatureMap(interceptor);
     Class<?> type = target.getClass();
+    // 获取目标类实现的接口
     Class<?>[] interfaces = getAllInterfaces(type, signatureMap);
     if (interfaces.length > 0) {
+      // 通过 JDK 动态代理为目标类生成代理类
       return Proxy.newProxyInstance(type.getClassLoader(), interfaces, new Plugin(target, interceptor, signatureMap));
     }
     return target;
@@ -54,10 +63,16 @@ public class Plugin implements InvocationHandler {
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     try {
+      /*
+       * 获取被拦截方法列表，比如：
+       *    signatureMap.get(Executor.class)，可能返回 [query, update, commit]
+       */
       Set<Method> methods = signatureMap.get(method.getDeclaringClass());
       if (methods != null && methods.contains(method)) {
+        // 检测方法列表是否包含被拦截的方法  执行插件逻辑
         return interceptor.intercept(new Invocation(target, method, args));
       }
+      // 执行被拦截的方法
       return method.invoke(target, args);
     } catch (Exception e) {
       throw ExceptionUtil.unwrapThrowable(e);

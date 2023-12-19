@@ -36,8 +36,9 @@ import org.apache.ibatis.cache.CacheException;
  */
 public class BlockingCache implements Cache {
 
-  private long timeout;
+  private long timeout; // timeout 指定了一个线程在 BlockingCache 上阻塞的最长时间。
   private final Cache delegate;
+  // 为每个 Key 分配了一个 CountDownLatch 用来控制并发访问
   private final ConcurrentHashMap<Object, CountDownLatch> locks;
 
   public BlockingCache(Cache delegate) {
@@ -87,20 +88,26 @@ public class BlockingCache implements Cache {
   }
 
   private void acquireLock(Object key) {
-    CountDownLatch newLatch = new CountDownLatch(1);
+    CountDownLatch newLatch = new CountDownLatch(1);  // 初始化一个全新的CountDownLatch对象
     while (true) {
+      // 尝试将key与newLatch这个CountDownLatch对象关联起来
+      // 如果没有其他线程并发，则返回的latch为null
       CountDownLatch latch = locks.putIfAbsent(key, newLatch);
       if (latch == null) {
+        // 如果当前key未关联CountDownLatch，则无其他线程并发，当前线程获取锁成功
         break;
       }
       try {
+        // 当前key已关联CountDownLatch对象，则表示有其他线程并发操作当前key，
+        // 当前线程需要阻塞在并发线程留下的CountDownLatch对象(latch)之上，
+        // 直至并发线程调用latch.countDown()唤醒该线程
         if (timeout > 0) {
           boolean acquired = latch.await(timeout, TimeUnit.MILLISECONDS);
-          if (!acquired) {
+          if (!acquired) { // 超时未获取到锁，则抛出异常
             throw new CacheException(
                 "Couldn't get a lock in " + timeout + " for the key " + key + " at the cache " + delegate.getId());
           }
-        } else {
+        } else { // 死等
           latch.await();
         }
       } catch (InterruptedException e) {
